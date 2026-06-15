@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRE 통합 자산 분석 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Pretendard', 'Inter', 'Apple SD Gothic Neo', sans-serif;
+            background: #0f1117;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
+
+        /* ── Glass card ── */
+        .glass {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(12px);
+        }
+        .glass-light {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.10);
+        }
+
+        /* ── Tabs ── */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeUp 0.3s ease; }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Neon accent ── */
+        .accent-glow { box-shadow: 0 0 20px rgba(59,130,246,0.25); }
+        .text-accent { color: #60a5fa; }
+
+        /* ── Custom input ── */
+        .dark-input {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #e2e8f0;
+            border-radius: 10px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .dark-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+        .dark-input::placeholder { color: #64748b; }
+
+        /* ── Stat card ── */
+        .stat-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 16px 20px;
+            transition: border-color 0.2s;
+        }
+        .stat-card:hover { border-color: rgba(255,255,255,0.16); }
+
+        /* ── Badge ── */
+        .badge-blue { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+        .badge-yellow { background: rgba(234,179,8,0.15); color: #fde047; border: 1px solid rgba(234,179,8,0.3); }
+        .badge-red { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+        .badge-green { background: rgba(34,197,94,0.15); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+        .badge-purple { background: rgba(139,92,246,0.15); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.3); }
+
+        /* ── Table ── */
+        .dark-table tr:hover td { background: rgba(255,255,255,0.04); }
+
+        /* ── Usage badge O/X ── */
+        .allow-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 26px; height: 26px; border-radius: 50%;
+            font-weight: 800; font-size: 13px;
+        }
+        .allow-o { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+        .allow-x { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+        .allow-cond { background: rgba(234,179,8,0.15); color: #fbbf24; border: 1px solid rgba(234,179,8,0.3); font-size: 9px; font-weight: 700; width:auto; padding: 2px 6px; border-radius: 99px; }
+
+        /* ── Map placeholder ── */
+        .map-placeholder {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        .map-grid {
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+        .map-overlay-label {
+            position: absolute; top: 10px; left: 10px;
+            background: rgba(15,17,23,0.85);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px; padding: 8px 12px;
+            font-size: 11px; font-weight: 600; color: #94a3b8;
+        }
+
+        /* ── Typing animation ── */
+        .typing::after {
+            content: '|';
+            animation: blink 0.8s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* ── Toast ── */
+        @keyframes toastIn {
+            from { transform: translateX(110%); opacity: 0; }
+            to   { transform: translateX(0);    opacity: 1; }
+        }
+        .toast-item { animation: toastIn 0.4s cubic-bezier(0.16,1,0.3,1); }
+
+        /* ── Divider ── */
+        .divider { border-color: rgba(255,255,255,0.06); }
+
+        /* ── Section header ── */
+        .section-label {
+            font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+            text-transform: uppercase; color: #475569;
+        }
+
+        /* ── Pulse dot ── */
+        .pulse-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: #4ade80;
+            box-shadow: 0 0 0 0 rgba(74,222,128,0.5);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%   { box-shadow: 0 0 0 0 rgba(74,222,128,0.5); }
+            70%  { box-shadow: 0 0 0 8px rgba(74,222,128,0); }
+            100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+        }
+
+        /* ── Chart toggle btn ── */
+        .chart-toggle { border-radius: 6px; padding: 4px 12px; font-size: 11px; font-weight: 600; transition: all 0.15s; }
+        .chart-toggle.active { background: #3b82f6; color: white; }
+        .chart-toggle:not(.active) { background: transparent; color: #64748b; }
+        .chart-toggle:not(.active):hover { color: #94a3b8; }
+
+        /* ── Progress bar ── */
+        .progress-bar-track {
+            background: rgba(255,255,255,0.08);
+            border-radius: 99px; height: 6px; overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%; border-radius: 99px;
+            transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+        }
+
+        /* nav active */
+        .nav-btn.active {
+            background: rgba(59,130,246,0.15);
+            color: #93c5fd;
+            border-color: rgba(59,130,246,0.3);
+        }
+        .nav-btn:not(.active) { color: #64748b; border-color: transparent; }
+        .nav-btn:not(.active):hover { color: #94a3b8; }
+
+        /* select dark */
+        select.dark-input option { background: #1e293b; color: #e2e8f0; }
+
+        /* AI result animate */
+        .ai-result-enter { animation: fadeUp 0.4s ease both; }
+
+        /* restriction pill */
+        .restr-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
+            color: #fca5a5; border-radius: 99px; padding: 3px 10px;
+            font-size: 11px; font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     HEADER
+════════════════════════════════════════ -->
+<header style="background: rgba(15,17,23,0.9); border-bottom: 1px solid rgba(255,255,255,0.07); position:sticky; top:0; z-index:100; backdrop-filter:blur(20px);">
+    <div style="max-width:1680px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; justify-content:space-between;">
+
+        <!-- Logo -->
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div style="background: linear-gradient(135deg,#3b82f6,#8b5cf6); width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 20px rgba(59,130,246,0.4);">
+                <svg width="18" height="18" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            </div>
+            <div>
+                <div style="font-size:15px; font-weight:800; color:#f1f5f9; letter-spacing:-0.3px;">CRE Asset Analyzer</div>
+                <div style="font-size:10px; font-weight:500; color:#475569; letter-spacing:0.08em; text-transform:uppercase;">Commercial Real Estate Platform</div>
+            </div>
+        </div>
+
+        <!-- Nav -->
+        <nav style="display:flex; gap:4px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:4px;">
+            <button onclick="switchTab('land-tab')" id="btn-land-tab" class="nav-btn active" style="padding:7px 18px; border-radius:8px; font-size:13px; font-weight:600; border:1px solid; transition:all 0.2s; cursor:pointer;">
+                📍 토지 분석
+            </button>
+            <button onclick="switchTab('office-tab')" id="btn-office-tab" class="nav-btn" style="padding:7px 18px; border-radius:8px; font-size:13px; font-weight:600; border:1px solid; transition:all 0.2s; cursor:pointer;">
+                🏢 오피스 NOC (준비중)
+            </button>
+        </nav>
+
+        <!-- Actions -->
+        <div style="display:flex; align-items:center; gap:10px;">
+            <button onclick="generatePDFReport()" style="background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; padding:8px 16px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:7px; transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Teaser 보고서
+            </button>
+        </div>
+    </div>
+</header>
+
+<main style="max-width:1680px; margin:0 auto; padding:24px; display:flex; flex-direction:column; gap:0;">
+
+<!-- ════════════════════════════════════════
+     TAB 1 — 토지 분석
+════════════════════════════════════════ -->
+<section id="land-tab" class="tab-content active">
+    <div style="display:flex; flex-direction:column; gap:20px;">
+
+    <!-- ── Row 0: 주소 검색 ── -->
+    <div class="glass" style="border-radius:16px; padding:20px 24px;">
+        <div style="display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap;">
+
+            <div style="flex:1; min-width:280px;">
+                <div class="section-label" style="margin-bottom:8px;">주소 검색 · 지번 또는 도로명</div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="land-address" value="인천광역시 계양구 계산동 1000" placeholder="예) 서울특별시 강남구 테헤란로 152"
+                        class="dark-input" style="flex:1; padding:10px 14px; font-size:14px;">
+                    <button onclick="analyzeLand()" id="btn-analyze"
+                        style="background:linear-gradient(135deg,#3b82f6,#6366f1); color:white; padding:10px 22px; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:7px; border:none; transition:opacity 0.2s; box-shadow:0 0 20px rgba(59,130,246,0.35);"
+                        onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        데이터 로드
+                    </button>
+                </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:12px; flex-shrink:0;">
+                <div>
+                    <div class="section-label" style="margin-bottom:8px;">PNU 코드</div>
+                    <input type="text" id="land-pnu" value="2824510100101000000" readonly
+                        style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#475569; border-radius:10px; padding:10px 14px; font-size:12px; font-family:monospace; width:200px; cursor:not-allowed;">
+                </div>
+                <div id="api-status" style="display:flex; align-items:center; gap:6px; margin-top:18px; font-size:12px; font-weight:600; color:#4ade80;">
+                    <div class="pulse-dot"></div> API 연결됨
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Row 1: 3단 메인 카드 ── -->
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+
+        <!-- 카드 1: 토지 기본/규제 정보 -->
+        <div class="glass" style="border-radius:16px; padding:22px; display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="font-size:13px; font-weight:700; color:#f1f5f9;">토지 기본 · 규제 정보</div>
+                <span class="badge-blue" style="font-size:10px; font-weight:600; padding:3px 9px; border-radius:99px;">국토부 API</span>
+            </div>
+
+            <!-- 대지면적 -->
+            <div style="border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:14px;">
+                <div class="section-label" style="margin-bottom:4px;">대지면적</div>
+                <div style="display:flex; align-items:baseline; gap:6px;">
+                    <span id="info-area" style="font-size:32px; font-weight:800; color:#f1f5f9; letter-spacing:-1px;">2,450</span>
+                    <span style="font-size:14px; color:#64748b; font-weight:500;">㎡</span>
+                    <span style="font-size:12px; color:#94a3b8; font-weight:400; margin-left:4px;">( <span id="info-area-py">741</span> 평 )</span>
+                </div>
+            </div>
+
+            <!-- 용도지역지구 -->
+            <div>
+                <div class="section-label" style="margin-bottom:8px;">용도지역 · 지구</div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;" id="zoning-badges">
+                    <span class="badge-yellow" style="font-size:12px; font-weight:700; padding:4px 12px; border-radius:99px;">중심상업지역</span>
+                    <span class="badge-red" style="font-size:12px; font-weight:700; padding:4px 12px; border-radius:99px;">방화지구</span>
+                </div>
+            </div>
+
+            <!-- 접도/건축선 -->
+            <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:12px; color:#64748b; font-weight:500;">접도 조건</span>
+                    <span id="info-road" style="font-size:12px; font-weight:600; color:#94a3b8;">소로2류 (폭 8~10m)</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:12px; color:#64748b; font-weight:500;">건축선 지정</span>
+                    <span id="info-bline" style="font-size:12px; font-weight:600; color:#f87171;">도로변 3m 후퇴</span>
+                </div>
+            </div>
+
+            <!-- 건폐율/용적률 -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div class="stat-card" style="text-align:center;">
+                    <div class="section-label" style="margin-bottom:6px;">건폐율 한도</div>
+                    <div id="info-bcr" style="font-size:24px; font-weight:800; color:#60a5fa;">80%</div>
+                    <div class="progress-bar-track" style="margin-top:8px;">
+                        <div class="progress-bar-fill" id="bcr-bar" style="width:80%; background:linear-gradient(90deg,#3b82f6,#6366f1);"></div>
+                    </div>
+                </div>
+                <div class="stat-card" style="text-align:center;">
+                    <div class="section-label" style="margin-bottom:6px;">용적률 한도</div>
+                    <div id="info-far" style="font-size:24px; font-weight:800; color:#a78bfa;">1,000%</div>
+                    <div class="progress-bar-track" style="margin-top:8px;">
+                        <div class="progress-bar-fill" id="far-bar" style="width:100%; background:linear-gradient(90deg,#8b5cf6,#a78bfa);"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 타 법령 제한 -->
+            <div>
+                <div class="section-label" style="margin-bottom:8px;">타 법령 제한 · 변동사항</div>
+                <div style="display:flex; flex-direction:column; gap:6px;" id="restrictions-list">
+                    <span class="restr-pill">
+                        <svg width="10" height="10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                        과밀억제권역 〈수도권정비계획법〉
+                    </span>
+                    <span class="restr-pill">
+                        <svg width="10" height="10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                        가축사육제한구역 〈가축분뇨법〉
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 카드 2: 건축 가능 규모 -->
+        <div class="glass" style="border-radius:16px; padding:22px; display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="font-size:13px; font-weight:700; color:#f1f5f9;">건축 가능 규모</div>
+                <span class="badge-purple" style="font-size:10px; font-weight:600; padding:3px 9px; border-radius:99px;">자동 산출</span>
+            </div>
+
+            <!-- 경고 박스 -->
+            <div style="background:rgba(234,179,8,0.08); border:1px solid rgba(234,179,8,0.2); border-radius:10px; padding:10px 12px; font-size:11px; color:#fbbf24; display:flex; gap:7px; align-items:flex-start; line-height:1.6;">
+                <svg width="13" height="13" fill="currentColor" viewBox="0 0 20 20" style="flex-shrink:0;margin-top:1px;"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                건축선 후퇴 면적 미공제 최대치 기준. 실제 설계 시 감소될 수 있습니다.
+            </div>
+
+            <!-- 허용 건축면적 -->
+            <div class="stat-card">
+                <div class="section-label" style="margin-bottom:4px;">허용 건축면적 (최대)</div>
+                <div style="display:flex; align-items:baseline; gap:5px;">
+                    <span id="calc-bldg-area" style="font-size:26px; font-weight:800; color:#60a5fa;">1,960</span>
+                    <span style="font-size:13px; color:#64748b;">㎡</span>
+                </div>
+                <div class="progress-bar-track" style="margin-top:8px;">
+                    <div class="progress-bar-fill" style="width:80%; background:linear-gradient(90deg,#3b82f6,#6366f1);"></div>
+                </div>
+                <div style="font-size:11px; color:#475569; margin-top:4px;">대지면적의 80% 적용</div>
+            </div>
+
+            <!-- 지상 연면적 -->
+            <div class="stat-card">
+                <div class="section-label" style="margin-bottom:4px;">지상 연면적 (최대)</div>
+                <div style="display:flex; align-items:baseline; gap:5px;">
+                    <span id="calc-floor-area" style="font-size:26px; font-weight:800; color:#a78bfa;">24,500</span>
+                    <span style="font-size:13px; color:#64748b;">㎡</span>
+                </div>
+                <div style="font-size:11px; color:#475569; margin-top:4px;">대지면적 × 용적률 1,000%</div>
+            </div>
+
+            <!-- 예상 층수 -->
+            <div class="stat-card">
+                <div class="section-label" style="margin-bottom:4px;">예상 지상 층수</div>
+                <div style="display:flex; align-items:baseline; gap:5px;">
+                    <span id="calc-floors" style="font-size:26px; font-weight:800; color:#34d399;">12</span>
+                    <span style="font-size:13px; color:#64748b;">층</span>
+                    <span style="font-size:11px; color:#475569;">내외</span>
+                </div>
+                <div style="font-size:11px; color:#475569; margin-top:4px;">용적률 ÷ 건폐율 기준</div>
+            </div>
+
+            <!-- 전체 연면적 (하이라이트) -->
+            <div style="background:linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15)); border:1px solid rgba(139,92,246,0.3); border-radius:12px; padding:16px 18px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:12px; font-weight:700; color:#c4b5fd;">전체 연면적 (지하 포함)</span>
+                    <span style="font-size:10px; background:rgba(139,92,246,0.2); color:#c4b5fd; border:1px solid rgba(139,92,246,0.3); padding:2px 8px; border-radius:99px; font-weight:700;">지상 80% / 지하 20%</span>
+                </div>
+                <div style="display:flex; align-items:baseline; gap:6px;">
+                    <span id="calc-total-gross" style="font-size:34px; font-weight:900; color:#c4b5fd; letter-spacing:-1px;">30,625</span>
+                    <span style="font-size:16px; font-weight:700; color:#8b5cf6;">㎡</span>
+                </div>
+                <div style="font-size:11px; color:#7c3aed; margin-top:4px;">지상 연면적 ÷ 0.8 환산값</div>
+            </div>
+        </div>
+
+        <!-- 카드 3: 지도 (네이버 + 지적경계) -->
+        <div class="glass" style="border-radius:16px; padding:22px; display:flex; flex-direction:column; gap:14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+                <div style="font-size:13px; font-weight:700; color:#f1f5f9;">위치 · 지적 경계</div>
+                <div style="display:flex; gap:6px;">
+                    <button onclick="setMapMode('naver')" id="map-btn-naver" class="chart-toggle active" style="cursor:pointer; border:none;">네이버 지도</button>
+                    <button onclick="setMapMode('land')" id="map-btn-land" class="chart-toggle" style="cursor:pointer; border:none;">지역지구</button>
+                </div>
+            </div>
+
+            <!-- 지도 컨테이너 -->
+            <div id="naver-map-container" class="map-placeholder" style="flex:1; min-height:280px; display:flex; align-items:center; justify-content:center;">
+                <div class="map-grid"></div>
+
+                <!-- 지적 경계 SVG -->
+                <svg width="200" height="160" viewBox="0 0 200 160" style="position:relative;z-index:2;filter:drop-shadow(0 0 12px rgba(59,130,246,0.4));">
+                    <polygon points="30,20 170,30 160,135 20,125" fill="rgba(59,130,246,0.12)" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5,3"/>
+                    <text x="100" y="85" font-family="Pretendard,sans-serif" font-size="13" font-weight="700" fill="#60a5fa" text-anchor="middle">중심상업지역</text>
+                    <text x="100" y="102" font-family="Pretendard,sans-serif" font-size="11" font-weight="500" fill="#3b82f6" text-anchor="middle">2,450 ㎡</text>
+                    <!-- 핀 마커 -->
+                    <circle cx="100" cy="68" r="5" fill="#f87171"/>
+                    <line x1="100" y1="73" x2="100" y2="68" stroke="#f87171" stroke-width="1.5"/>
+                </svg>
+
+                <!-- 오버레이 -->
+                <div class="map-overlay-label" style="z-index:3;">
+                    <div style="font-size:10px; color:#475569; margin-bottom:3px;">📍 인천광역시 계양구</div>
+                    <div style="font-size:12px; font-weight:700; color:#94a3b8;">계산동 1000</div>
+                </div>
+
+                <!-- 범례 -->
+                <div style="position:absolute; top:10px; right:10px; z-index:3; background:rgba(15,17,23,0.85); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px 12px; font-size:11px;">
+                    <div style="font-size:10px; font-weight:700; color:#475569; margin-bottom:6px; letter-spacing:0.08em; text-transform:uppercase;">지역지구</div>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;background:rgba(234,179,8,0.5);border:1px solid rgba(234,179,8,0.7);border-radius:2px;"></span><span style="color:#94a3b8;">주거지역</span></div>
+                        <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;background:rgba(239,68,68,0.5);border:1px solid rgba(239,68,68,0.7);border-radius:2px;"></span><span style="color:#94a3b8;">상업지역</span></div>
+                        <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;background:rgba(99,102,241,0.5);border:1px solid rgba(99,102,241,0.7);border-radius:2px;"></span><span style="color:#94a3b8;">공업지역</span></div>
+                        <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;background:rgba(34,197,94,0.5);border:1px solid rgba(34,197,94,0.7);border-radius:2px;"></span><span style="color:#94a3b8;">녹지지역</span></div>
+                    </div>
+                </div>
+
+                <div style="position:absolute; bottom:8px; right:10px; font-size:10px; font-weight:600; color:#334155; z-index:3;">Naver Maps API 연동 예정</div>
+            </div>
+
+            <!-- 좌표 정보 -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; flex-shrink:0;">
+                <div class="stat-card" style="padding:10px 14px;">
+                    <div class="section-label" style="margin-bottom:3px;">위도 (Lat)</div>
+                    <div id="info-lat" style="font-size:13px; font-weight:700; color:#94a3b8; font-family:monospace;">37.5445321</div>
+                </div>
+                <div class="stat-card" style="padding:10px 14px;">
+                    <div class="section-label" style="margin-bottom:3px;">경도 (Lng)</div>
+                    <div id="info-lng" style="font-size:13px; font-weight:700; color:#94a3b8; font-family:monospace;">126.7389124</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Row 2: AI 조례 분석 ── -->
+    <div class="glass" style="border-radius:16px; padding:24px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:16px; margin-bottom:20px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="background:linear-gradient(135deg,rgba(99,102,241,0.3),rgba(139,92,246,0.3)); width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(139,92,246,0.3);">
+                    <svg width="20" height="20" fill="none" stroke="#a78bfa" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <div>
+                    <div style="font-size:15px; font-weight:800; color:#f1f5f9;">AI 지자체 조례 · 법령 분석</div>
+                    <div style="font-size:11px; color:#475569; margin-top:2px;">국가법령정보센터 API + LLM 기반 지역 맞춤 규제 요약</div>
+                </div>
+            </div>
+            <button onclick="runAIAnalysis()" id="btn-run-ai"
+                style="background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; padding:10px 22px; border-radius:10px; font-size:13px; font-weight:700; border:none; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 0 20px rgba(99,102,241,0.35); transition:opacity 0.2s;"
+                onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span id="ai-city-name">인천광역시</span> 조례 AI 분석 실행
+            </button>
+        </div>
+
+        <!-- 대기 상태 -->
+        <div id="ai-waiting" style="padding:32px 0; display:flex; flex-direction:column; align-items:center; gap:10px; color:#334155;">
+            <svg width="48" height="48" fill="none" stroke="#334155" stroke-width="1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <p style="font-size:13px; color:#475569;">상단에서 주소를 검색한 뒤 조례 AI 분석을 실행하면 지역 맞춤 규제 요약이 표시됩니다.</p>
+        </div>
+
+        <!-- 로딩 -->
+        <div id="ai-loading" style="display:none; padding:32px 0; flex-direction:column; align-items:center; gap:14px;">
+            <div style="width:44px; height:44px; border-radius:50%; border:3px solid rgba(139,92,246,0.2); border-top-color:#8b5cf6; animation:spin 0.8s linear infinite;"></div>
+            <p style="font-size:13px; font-weight:600; color:#8b5cf6;" id="ai-loading-text">도시계획 조례 스크래핑 중</p>
+        </div>
+        <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+
+        <!-- 결과 -->
+        <div id="ai-result" style="display:none; grid-template-columns:1fr 1fr; gap:16px;" class="ai-result-enter">
+            <div class="glass-light" style="border-radius:12px; padding:18px;">
+                <div style="font-size:12px; font-weight:700; color:#93c5fd; margin-bottom:14px; display:flex; align-items:center; gap:7px;">
+                    <span style="width:8px; height:8px; background:#3b82f6; border-radius:50%;"></span>
+                    <span id="ai-city-result">인천광역시</span> 도시계획 조례 요약
+                </div>
+                <ul style="display:flex; flex-direction:column; gap:12px;" id="ai-result-list-1">
+                    <li style="display:flex; gap:10px; align-items:flex-start;">
+                        <span style="color:#3b82f6; flex-shrink:0; margin-top:1px;">›</span>
+                        <span style="font-size:13px; color:#94a3b8; line-height:1.6;"><strong style="color:#e2e8f0;">중심상업지역 건폐율:</strong> 국토계획법 상한 90% → 지자체 조례 80% 제한 적용.</span>
+                    </li>
+                    <li style="display:flex; gap:10px; align-items:flex-start;">
+                        <span style="color:#3b82f6; flex-shrink:0; margin-top:1px;">›</span>
+                        <span style="font-size:13px; color:#94a3b8; line-height:1.6;"><strong style="color:#e2e8f0;">용적률 인센티브:</strong> 녹색건축 인증 및 공개공지 확보 시 기본 용적률 1.2배 완화 가능.</span>
+                    </li>
+                    <li style="display:flex; gap:10px; align-items:flex-start;">
+                        <span style="color:#3b82f6; flex-shrink:0; margin-top:1px;">›</span>
+                        <span style="font-size:13px; color:#94a3b8; line-height:1.6;"><strong style="color:#e2e8f0;">용도 제한:</strong> 주거밀집구역 50m 이내 연접 시 위락·숙박시설 원칙적 금지.</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="glass-light" style="border-radius:12px; padding:18px;">
+                <div style="font-size:12px; font-weight:700; color:#86efac; margin-bottom:14px; display:flex; align-items:center; gap:7px;">
+                    <span style="width:8px; height:8px; background:#22c55e; border-radius:50%;"></span>
+                    건축 · 주차장 조례 분석
+                </div>
+                <ul style="display:flex; flex-direction:column; gap:12px;">
+                    <li style="display:flex; gap:10px; align-items:flex-start;">
+                        <span style="color:#22c55e; flex-shrink:0; margin-top:1px;">›</span>
+                        <span style="font-size:13px; color:#94a3b8; line-height:1.6;"><strong style="color:#e2e8f0;">주차 산정:</strong> 업무시설 기준 100㎡당 1대. 기계식 주차 전체의 30% 이하 제한.</span>
+                    </li>
+                    <li style="display:flex; gap:10px; align-items:flex-start;">
+                        <span style="color:#22c55e; flex-shrink:0; margin-top:1px;">›</span>
+                        <span style="font-size:13px; color:#94a3b8; line-height:1.6;"><strong style="color:#e2e8f0;">조경 의무:</strong> 연면적 2,000㎡ 이상 상업용 신축 시 대지면적의 15% 이상 조경 확보 의무.</span>
+                    </li>
+                    <li style="display:flex; gap:10px; align-items:flex-start;">
+                        <span style="color:#22c55e; flex-shrink:0; margin-top:1px;">›</span>
+                        <span style="font-size:13px; color:#94a3b8; line-height:1.6;"><strong style="color:#e2e8f0;">건물 높이:</strong> 인접 도로 폭의 1.5배 이내 높이 규제 적용 구역 포함 여부 확인 필요.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Row 3: 건축물 용도 + 공시지가 ── -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+        <!-- 건축물 용도 허용 테이블 -->
+        <div class="glass" style="border-radius:16px; padding:22px; display:flex; flex-direction:column; gap:14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="font-size:13px; font-weight:700; color:#f1f5f9;">건축물 용도별 허용 여부</div>
+                <div style="display:flex; gap:10px; font-size:11px; font-weight:600;">
+                    <span style="display:flex; align-items:center; gap:5px; color:#4ade80;"><span class="allow-badge allow-o" style="width:18px;height:18px;font-size:10px;">O</span>허용</span>
+                    <span style="display:flex; align-items:center; gap:5px; color:#f87171;"><span class="allow-badge allow-x" style="width:18px;height:18px;font-size:10px;">X</span>불가</span>
+                    <span style="display:flex; align-items:center; gap:5px; color:#fbbf24;"><span class="allow-badge allow-cond" style="height:18px;">△</span>조건부</span>
+                </div>
+            </div>
+
+            <div style="overflow-y:auto; flex:1; max-height:380px;" class="dark-table">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="position:sticky; top:0; background:#0f1117; z-index:5;">
+                            <th style="text-align:left; font-size:10px; font-weight:700; color:#475569; letter-spacing:0.08em; text-transform:uppercase; padding:8px 10px; border-bottom:1px solid rgba(255,255,255,0.06);">건축물 용도</th>
+                            <th style="text-align:center; font-size:10px; font-weight:700; color:#475569; letter-spacing:0.08em; text-transform:uppercase; padding:8px 10px; border-bottom:1px solid rgba(255,255,255,0.06); width:70px;">허용</th>
+                            <th style="text-align:left; font-size:10px; font-weight:700; color:#475569; letter-spacing:0.08em; text-transform:uppercase; padding:8px 10px; border-bottom:1px solid rgba(255,255,255,0.06);">비고</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usage-table-body" style="font-size:12px;"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 공시지가 추이 -->
+        <div class="glass" style="border-radius:16px; padding:22px; display:flex; flex-direction:column; gap:14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="font-size:13px; font-weight:700; color:#f1f5f9;">개별공시지가 추이</div>
+                <div style="display:flex; gap:2px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:3px;">
+                    <button onclick="updateChart(5)" id="btn-chart-5y" class="chart-toggle active" style="cursor:pointer; border:none;">5년</button>
+                    <button onclick="updateChart(10)" id="btn-chart-10y" class="chart-toggle" style="cursor:pointer; border:none;">10년</button>
+                </div>
+            </div>
+
+            <!-- KPI 요약 -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+                <div class="stat-card" style="padding:10px 14px;">
+                    <div class="section-label" style="margin-bottom:3px;">최근 공시지가</div>
+                    <div style="font-size:16px; font-weight:800; color:#f1f5f9;">1,250</div>
+                    <div style="font-size:10px; color:#64748b; margin-top:1px;">만원/㎡ (2023)</div>
+                </div>
+                <div class="stat-card" style="padding:10px 14px;">
+                    <div class="section-label" style="margin-bottom:3px;">5년 누적 상승률</div>
+                    <div style="font-size:16px; font-weight:800; color:#4ade80; display:flex; align-items:center; gap:3px;">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                        18.4%
+                    </div>
+                    <div style="font-size:10px; color:#64748b; margin-top:1px;">2019 → 2023</div>
+                </div>
+                <div class="stat-card" style="padding:10px 14px;">
+                    <div class="section-label" style="margin-bottom:3px;">10년 누적 상승률</div>
+                    <div style="font-size:16px; font-weight:800; color:#60a5fa; display:flex; align-items:center; gap:3px;">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                        42.5%
+                    </div>
+                    <div style="font-size:10px; color:#64748b; margin-top:1px;">2014 → 2023</div>
+                </div>
+            </div>
+
+            <div style="flex:1; position:relative; min-height:240px;">
+                <canvas id="landPriceChart"></canvas>
+            </div>
+
+            <div style="display:flex; gap:16px; font-size:11px; font-weight:600;">
+                <span style="display:flex; align-items:center; gap:5px; color:#60a5fa;"><span style="width:12px; height:3px; background:#3b82f6; border-radius:2px; display:inline-block;"></span>공시지가 (만원/㎡)</span>
+                <span style="display:flex; align-items:center; gap:5px; color:#f87171;"><span style="width:12px; height:3px; background:#ef4444; border-radius:2px; display:inline-block;"></span>상승률 (%)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Row 4: 용도변경 시뮬레이터 + 상권 ── -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+        <!-- 용도변경 시뮬레이터 -->
+        <div class="glass" style="border-radius:16px; padding:22px; display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; align-items:center; gap:10px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:14px;">
+                <div style="background:rgba(249,115,22,0.12); border:1px solid rgba(249,115,22,0.25); width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <svg width="17" height="17" fill="none" stroke="#fb923c" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </div>
+                <div>
+                    <div style="font-size:13px; font-weight:700; color:#f1f5f9;">건축물 용도변경 시뮬레이터</div>
+                    <div style="font-size:11px; color:#475569; margin-top:1px;">건축법 제19조 시설군 분류 기반</div>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 40px 1fr; gap:8px; align-items:center;">
+                <div>
+                    <div class="section-label" style="margin-bottom:6px;">현재 용도 (건축물대장)</div>
+                    <select id="use-current" class="dark-input" style="width:100%; padding:9px 12px; font-size:12px; cursor:pointer;">
+                        <option value="8">단독/공동주택 · 업무시설 (8군)</option>
+                        <option value="7" selected>제1·2종 근린생활시설 (7군)</option>
+                        <option value="6">의료/교육연구시설 (6군)</option>
+                        <option value="5">판매/운동/숙박시설 (5군)</option>
+                        <option value="4">문화집회/종교/위락 (4군)</option>
+                        <option value="3">방송통신/발전시설 (3군)</option>
+                        <option value="2">공장/창고/운수시설 (2군)</option>
+                        <option value="1">자동차관련시설 (1군)</option>
+                    </select>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:center; margin-top:18px;">
+                    <svg width="20" height="20" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </div>
+                <div>
+                    <div class="section-label" style="margin-bottom:6px; color:#fb923c;">변경 희망 용도</div>
+                    <select id="use-target" class="dark-input" style="width:100%; padding:9px 12px; font-size:12px; cursor:pointer; border-color:rgba(249,115,22,0.3);">
+                        <option value="8" selected>업무시설 · 오피스 (8군)</option>
+                        <option value="7">제1·2종 근린생활시설 (7군)</option>
+                        <option value="6">의료/교육연구시설 (6군)</option>
+                        <option value="5">판매/운동/숙박시설 (5군)</option>
+                        <option value="4">문화집회/종교/위락 (4군)</option>
+                        <option value="3">방송통신/발전시설 (3군)</option>
+                        <option value="2">공장/창고시설 (2군)</option>
+                        <option value="1">자동차관련시설 (1군)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="analyzeUseChange()"
+                style="width:100%; background:rgba(249,115,22,0.12); border:1px solid rgba(249,115,22,0.3); color:#fb923c; padding:11px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s;"
+                onmouseover="this.style.background='rgba(249,115,22,0.2)'" onmouseout="this.style.background='rgba(249,115,22,0.12)'">
+                절차 분석 실행
+            </button>
+
+            <!-- 결과 -->
+            <div id="use-result-panel" style="display:none; flex-direction:column; gap:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <div class="section-label" style="margin-bottom:4px;">인허가 절차</div>
+                        <div id="use-result-type" style="font-size:20px; font-weight:900; color:#f87171;">용도변경 허가 대상</div>
+                    </div>
+                    <span id="use-result-direction" style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:99px; background:rgba(239,68,68,0.1); color:#f87171; border:1px solid rgba(239,68,68,0.3);">상위 이동 ↑</span>
+                </div>
+                <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:12px; display:flex; flex-direction:column; gap:8px;">
+                    <div style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px;">체크리스트</div>
+                    <div style="font-size:12px; color:#94a3b8; display:flex; gap:8px;"><span style="color:#4ade80;">✓</span>주차대수 재산정 및 추가 확보 검토</div>
+                    <div style="font-size:12px; color:#94a3b8; display:flex; gap:8px;"><span style="color:#4ade80;">✓</span>하수도법 오수발생량 산정 (정화조 용량 확인)</div>
+                    <div style="font-size:12px; color:#94a3b8; display:flex; gap:8px;"><span style="color:#4ade80;">✓</span>소방시설법 (스프링클러, 피난계단) 구조 검토</div>
+                </div>
+            </div>
+
+            <div id="use-initial-panel" style="flex:1; min-height:120px; border:1px dashed rgba(255,255,255,0.08); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                <p style="font-size:12px; color:#334155; text-align:center;">용도를 선택 후 '절차 분석 실행'을 눌러주세요.</p>
+            </div>
+        </div>
+
+        <!-- 상권 분석 -->
+        <div class="glass" style="border-radius:16px; padding:22px; display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; align-items:center; gap:10px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:14px;">
+                <div style="background:rgba(236,72,153,0.12); border:1px solid rgba(236,72,153,0.25); width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <svg width="17" height="17" fill="none" stroke="#f472b6" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <div>
+                    <div style="font-size:13px; font-weight:700; color:#f1f5f9;">상권 · 배후수요 분석</div>
+                    <div style="font-size:11px; color:#475569; margin-top:1px;">소상공인진흥공단 + 통계청 API / 반경 500m</div>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div class="stat-card">
+                    <div class="section-label" style="margin-bottom:4px;">일일 평균 유동인구</div>
+                    <div style="font-size:24px; font-weight:900; color:#f1f5f9;">45,210<span style="font-size:12px; color:#64748b; font-weight:400; margin-left:4px;">명/일</span></div>
+                    <div style="font-size:11px; color:#4ade80; margin-top:3px; display:flex; align-items:center; gap:3px;">
+                        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>전년비 5.2% 증가
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="section-label" style="margin-bottom:4px;">직장인 비율</div>
+                    <div style="font-size:24px; font-weight:900; color:#60a5fa;">68.4<span style="font-size:14px; font-weight:700; margin-left:2px;">%</span></div>
+                    <div style="font-size:11px; color:#475569; margin-top:3px;">오피스 밀집 상권</div>
+                </div>
+            </div>
+
+            <div style="flex:1; position:relative; min-height:160px;">
+                <div style="font-size:12px; font-weight:700; color:#94a3b8; margin-bottom:8px;">시간대별 유동인구</div>
+                <canvas id="trafficTimeChart" style="max-height:160px;"></canvas>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:center;">
+                <div style="position:relative; width:120px; height:120px; margin:0 auto;">
+                    <canvas id="ageDoughnutChart"></canvas>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                    <div style="font-size:11px; font-weight:600; display:flex; align-items:center; gap:5px; color:#94a3b8;"><span style="width:8px;height:8px;background:#3b82f6;border-radius:50%;flex-shrink:0;"></span>30대 35%</div>
+                    <div style="font-size:11px; font-weight:600; display:flex; align-items:center; gap:5px; color:#94a3b8;"><span style="width:8px;height:8px;background:#8b5cf6;border-radius:50%;flex-shrink:0;"></span>40대 28%</div>
+                    <div style="font-size:11px; font-weight:600; display:flex; align-items:center; gap:5px; color:#94a3b8;"><span style="width:8px;height:8px;background:#10b981;border-radius:50%;flex-shrink:0;"></span>20대 20%</div>
+                    <div style="font-size:11px; font-weight:600; display:flex; align-items:center; gap:5px; color:#94a3b8;"><span style="width:8px;height:8px;background:#475569;border-radius:50%;flex-shrink:0;"></span>기타 17%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </div><!-- /flex column -->
+</section>
+
+<!-- ════════════════════════════════════════
+     TAB 2 — 오피스 (Placeholder)
+════════════════════════════════════════ -->
+<section id="office-tab" class="tab-content">
+    <div class="glass" style="border-radius:16px; padding:80px 40px; display:flex; flex-direction:column; align-items:center; gap:16px; min-height:600px; justify-content:center;">
+        <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.2); width:64px; height:64px; border-radius:18px; display:flex; align-items:center; justify-content:center;">
+            <svg width="30" height="30" fill="none" stroke="#60a5fa" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        </div>
+        <div style="font-size:20px; font-weight:800; color:#f1f5f9;">오피스 NOC 분석</div>
+        <p style="font-size:14px; color:#475569; text-align:center; max-width:400px;">오피스 엑셀 DB 연동 및 임대조건 시뮬레이션 기능이 곧 통합됩니다.<br>토지 분석 탭 고도화 완료 후 순차 개발 예정입니다.</p>
+        <span style="background:rgba(234,179,8,0.1); border:1px solid rgba(234,179,8,0.2); color:#fbbf24; padding:6px 16px; border-radius:99px; font-size:12px; font-weight:700; margin-top:8px;">개발 예정</span>
+    </div>
+</section>
+
+</main>
+
+<!-- Toast -->
+<div id="toast-container" style="position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:10px;"></div>
+
+<!-- ════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════ -->
+<script>
+// ── 탭 전환 ──────────────────────────────
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    document.getElementById(tabId === 'land-tab' ? 'btn-land-tab' : 'btn-office-tab').classList.add('active');
+}
+
+// ── 지도 모드 ──────────────────────────────
+function setMapMode(mode) {
+    ['naver','land'].forEach(m => {
+        const btn = document.getElementById('map-btn-' + m);
+        btn.classList.toggle('active', m === mode);
+    });
+}
+
+// ── Toast ──────────────────────────────────
+function showToast(msg, type = 'info') {
+    const c = document.getElementById('toast-container');
+    const t = document.createElement('div');
+    const isSuccess = type === 'success';
+    t.className = 'toast-item';
+    t.style.cssText = `background:${isSuccess ? 'rgba(34,197,94,0.15)' : 'rgba(59,130,246,0.15)'}; border:1px solid ${isSuccess ? 'rgba(34,197,94,0.3)' : 'rgba(59,130,246,0.3)'}; backdrop-filter:blur(12px); color:${isSuccess ? '#4ade80' : '#93c5fd'}; padding:12px 18px; border-radius:12px; font-size:13px; font-weight:600; display:flex; align-items:center; gap:10px; max-width:380px; box-shadow:0 8px 32px rgba(0,0,0,0.4);`;
+    const icon = isSuccess
+        ? `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`
+        : `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01"/></svg>`;
+    t.innerHTML = icon + `<span>${msg}</span>`;
+    c.appendChild(t);
+    setTimeout(() => { t.style.transition = 'all 0.35s ease'; t.style.opacity = '0'; t.style.transform = 'translateX(110%)'; setTimeout(() => t.remove(), 360); }, 4500);
+}
+
+function generatePDFReport() {
+    showToast('Teaser 보고서 생성 시작...', 'info');
+    setTimeout(() => showToast('보고서 다운로드 완료', 'success'), 2000);
+}
+
+// ── 토지 데이터 로드 ──────────────────────
+function analyzeLand() {
+    const addr = document.getElementById('land-address').value.trim();
+    if (!addr) { showToast('주소를 입력해주세요.', 'info'); return; }
+
+    // PNU 갱신 (시뮬레이션)
+    document.getElementById('land-pnu').value = '2824510100101000000';
+
+    const area = 2450, bcr = 80, far = 1000;
+    document.getElementById('info-area').textContent = area.toLocaleString();
+    document.getElementById('info-area-py').textContent = Math.round(area * 0.3025).toLocaleString();
+    document.getElementById('info-bcr').textContent = bcr + '%';
+    document.getElementById('info-far').textContent = far.toLocaleString() + '%';
+
+    const bldgArea = area * (bcr / 100);
+    const floorArea = area * (far / 100);
+    const floors = Math.floor(far / bcr);
+    const total = Math.round(floorArea / 0.8);
+
+    document.getElementById('calc-bldg-area').textContent = bldgArea.toLocaleString();
+    document.getElementById('calc-floor-area').textContent = floorArea.toLocaleString();
+    document.getElementById('calc-floors').textContent = floors;
+    document.getElementById('calc-total-gross').textContent = total.toLocaleString();
+
+    // AI 리셋
+    document.getElementById('ai-result').style.display = 'none';
+    document.getElementById('ai-loading').style.display = 'none';
+    document.getElementById('ai-waiting').style.display = '';
+
+    const cityName = addr.includes('서울') ? '서울특별시' : addr.includes('경기') ? '경기도' : addr.includes('부산') ? '부산광역시' : '인천광역시';
+    document.getElementById('ai-city-name').textContent = cityName;
+    document.getElementById('ai-city-result').textContent = cityName;
+
+    renderUsageTable();
+    updateChart(currentChartYears);
+    showToast(`[API] ${addr} 공공데이터 로드 완료`, 'success');
+}
+
+// ── AI 조례 분석 ─────────────────────────
+function runAIAnalysis() {
+    const waiting = document.getElementById('ai-waiting');
+    const loading = document.getElementById('ai-loading');
+    const result  = document.getElementById('ai-result');
+    const btn     = document.getElementById('btn-run-ai');
+    const texts   = ['도시계획 조례 스크래핑 중', '건축조례 DB 조회 중', 'LLM 분석 처리 중', '규제 요약 생성 중'];
+    let ti = 0;
+
+    btn.disabled = true; btn.style.opacity = '0.7';
+    waiting.style.display = 'none';
+    result.style.display = 'none';
+    loading.style.display = 'flex';
+
+    const interval = setInterval(() => {
+        document.getElementById('ai-loading-text').textContent = texts[ti++ % texts.length];
+    }, 700);
+
+    setTimeout(() => {
+        clearInterval(interval);
+        loading.style.display = 'none';
+        result.style.display = 'grid';
+        btn.disabled = false; btn.style.opacity = '1';
+        showToast('지자체 조례 AI 분석 완료', 'success');
+    }, 2800);
+}
+
+// ── 건축물 용도 테이블 ───────────────────
+const usageData = [
+    { type: "제1종 근린생활시설",           status: "O",    note: "전부 허용" },
+    { type: "제2종 근린생활시설",           status: "O",    note: "단란주점 제외" },
+    { type: "업무시설 (오피스·오피스텔)",   status: "O",    note: "허용" },
+    { type: "판매시설 (상점·마트·백화점)",  status: "O",    note: "허용" },
+    { type: "숙박시설",                     status: "COND", note: "주거밀집구역 50m 이내 금지" },
+    { type: "위락시설 (유흥·단란)",         status: "COND", note: "주거밀집구역 50m 이내 금지" },
+    { type: "의료시설 (병원)",              status: "O",    note: "허용" },
+    { type: "교육연구시설 (학원·학교)",     status: "O",    note: "허용" },
+    { type: "노유자시설",                   status: "O",    note: "허용" },
+    { type: "문화집회시설 (공연장·전시장)", status: "O",    note: "허용" },
+    { type: "종교시설",                     status: "O",    note: "허용" },
+    { type: "운동시설",                     status: "O",    note: "허용" },
+    { type: "숙박시설 (관광호텔)",          status: "O",    note: "허용 (관광진흥법 등록 요건)" },
+    { type: "공장",                         status: "X",    note: "상업지역 내 불허" },
+    { type: "창고시설",                     status: "X",    note: "상업지역 내 불허" },
+    { type: "단독·공동주택",               status: "O",    note: "주상복합 형태 한정" },
+    { type: "동물 및 식물 관련 시설",       status: "X",    note: "상업지역 내 불허" },
+    { type: "자원순환 관련 시설",           status: "X",    note: "상업지역 내 불허" },
+];
+
+function renderUsageTable() {
+    const tbody = document.getElementById('usage-table-body');
+    tbody.innerHTML = '';
+    usageData.forEach(item => {
+        let badge;
+        if (item.status === 'O')    badge = `<span class="allow-badge allow-o">O</span>`;
+        else if (item.status === 'X') badge = `<span class="allow-badge allow-x">X</span>`;
+        else badge = `<span class="allow-badge allow-cond">조건부</span>`;
+
+        const noteColor = item.status === 'X' ? '#f87171' : item.status === 'COND' ? '#fbbf24' : '#64748b';
+        tbody.innerHTML += `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s;">
+                <td style="padding:10px 10px; font-size:12px; font-weight:500; color:#94a3b8;">${item.type}</td>
+                <td style="padding:10px 10px; text-align:center;">${badge}</td>
+                <td style="padding:10px 10px; font-size:11px; color:${noteColor};">${item.note}</td>
+            </tr>`;
+    });
+}
+
+// ── 공시지가 차트 ────────────────────────
+let priceChart = null;
+let currentChartYears = 5;
+
+const allYears  = ['2014','2015','2016','2017','2018','2019','2020','2021','2022','2023'];
+const allPrices = [870,   910,   950,  1020,  1080,  1150,  1180,  1210,  1240,  1250];
+const allRates  = [0,     4.5,   4.3,  7.3,   5.8,   6.4,   2.6,   2.5,   2.4,   0.8];
+
+function initLandPriceChart() {
+    const ctx = document.getElementById('landPriceChart').getContext('2d');
+    priceChart = new Chart(ctx, {
+        data: {
+            labels: allYears.slice(-5),
+            datasets: [
+                {
+                    type: 'bar',
+                    label: '공시지가 (만원/㎡)',
+                    data: allPrices.slice(-5),
+                    backgroundColor: 'rgba(59,130,246,0.25)',
+                    borderColor: 'rgba(59,130,246,0.7)',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                    yAxisID: 'y'
+                },
+                {
+                    type: 'line',
+                    label: '상승률 (%)',
+                    data: allRates.slice(-5),
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239,68,68,0.08)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#ef4444',
+                    pointRadius: 4,
+                    tension: 0.3,
+                    yAxisID: 'y1',
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15,17,23,0.95)',
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    borderWidth: 1,
+                    titleColor: '#94a3b8',
+                    bodyColor: '#e2e8f0',
+                    padding: 12,
+                    callbacks: {
+                        label: ctx => ctx.datasetIndex === 0
+                            ? `  공시지가: ${ctx.raw.toLocaleString()} 만원/㎡`
+                            : `  상승률: ${ctx.raw}%`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#475569', font: { size: 11 } } },
+                y: {
+                    position: 'left',
+                    grid: { color: 'rgba(255,255,255,0.04)' },
+                    ticks: { color: '#3b82f6', font: { size: 11 }, callback: v => v + '만' }
+                },
+                y1: {
+                    position: 'right',
+                    grid: { display: false },
+                    ticks: { color: '#ef4444', font: { size: 11 }, callback: v => v + '%' }
+                }
+            }
+        }
+    });
+}
+
+function updateChart(years) {
+    currentChartYears = years;
+    ['5','10'].forEach(y => {
+        const btn = document.getElementById('btn-chart-' + y + 'y');
+        btn.classList.toggle('active', parseInt(y) === years);
+    });
+    const slice = -years;
+    priceChart.data.labels = allYears.slice(slice);
+    priceChart.data.datasets[0].data = allPrices.slice(slice);
+    priceChart.data.datasets[1].data = allRates.slice(slice);
+    priceChart.update();
+}
+
+// ── 상권 차트 ────────────────────────────
+let trafficChart = null, ageChart = null;
+
+function initCommercialCharts() {
+    const ctx1 = document.getElementById('trafficTimeChart').getContext('2d');
+    if (trafficChart) trafficChart.destroy();
+    trafficChart = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: ['06-09', '09-12', '12-15', '15-18', '18-21', '21-24'],
+            datasets: [{ label: '유동인구', data: [3200, 8500, 12000, 9800, 8100, 3600], backgroundColor: 'rgba(236,72,153,0.25)', borderColor: 'rgba(236,72,153,0.7)', borderWidth: 1, borderRadius: 4 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(15,17,23,0.95)', titleColor: '#94a3b8', bodyColor: '#e2e8f0', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1 } },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#475569', font: { size: 10 } } },
+                y: { display: false }
+            }
+        }
+    });
+
+    const ctx2 = document.getElementById('ageDoughnutChart').getContext('2d');
+    if (ageChart) ageChart.destroy();
+    ageChart = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: ['30대','40대','20대','기타'],
+            datasets: [{ data: [35,28,20,17], backgroundColor: ['#3b82f6','#8b5cf6','#10b981','#475569'], borderWidth: 0, cutout: '68%' }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+}
+
+// ── 용도변경 시뮬레이터 ──────────────────
+function analyzeUseChange() {
+    document.getElementById('use-initial-panel').style.display = 'none';
+    const panel = document.getElementById('use-result-panel');
+    panel.style.display = 'flex';
+
+    const cur = parseInt(document.getElementById('use-current').value);
+    const tgt = parseInt(document.getElementById('use-target').value);
+    const typeEl = document.getElementById('use-result-type');
+    const dirEl  = document.getElementById('use-result-direction');
+
+    if (cur > tgt) {
+        typeEl.textContent = '용도변경 허가 대상';
+        typeEl.style.color = '#f87171';
+        dirEl.textContent = '상위 시설군으로 이동 ↑';
+        dirEl.style.background = 'rgba(239,68,68,0.1)';
+        dirEl.style.color = '#f87171';
+        dirEl.style.borderColor = 'rgba(239,68,68,0.3)';
+    } else if (cur < tgt) {
+        typeEl.textContent = '용도변경 신고 대상';
+        typeEl.style.color = '#60a5fa';
+        dirEl.textContent = '하위 시설군으로 이동 ↓';
+        dirEl.style.background = 'rgba(59,130,246,0.1)';
+        dirEl.style.color = '#60a5fa';
+        dirEl.style.borderColor = 'rgba(59,130,246,0.3)';
+    } else {
+        typeEl.textContent = '건축물대장 기재내용 변경';
+        typeEl.style.color = '#4ade80';
+        dirEl.textContent = '동일 시설군 내 변경 ↔';
+        dirEl.style.background = 'rgba(34,197,94,0.1)';
+        dirEl.style.color = '#4ade80';
+        dirEl.style.borderColor = 'rgba(34,197,94,0.3)';
+    }
+}
+
+// ── 초기화 ───────────────────────────────
+window.onload = () => {
+    renderUsageTable();
+    initLandPriceChart();
+    initCommercialCharts();
+};
+</script>
+</body>
+</html>
