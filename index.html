@@ -832,7 +832,18 @@ function initNaverMap(lat, lng, address) {
 // 주소 → 좌표 변환
 function geocodeAddress(address) {
     if (typeof naver === 'undefined' || !naver.maps || !naver.maps.Service) {
-        showToast('지도 API 로딩 중입니다. 잠시 후 다시 시도해주세요.', 'info');
+        // API 아직 로딩 중이면 최대 10초 대기 후 재시도
+        let waited = 0;
+        const interval = setInterval(() => {
+            waited += 300;
+            if (typeof naver !== 'undefined' && naver.maps && naver.maps.Service) {
+                clearInterval(interval);
+                geocodeAddress(address);
+            } else if (waited >= 10000) {
+                clearInterval(interval);
+                showToast('지도 API 로딩에 실패했습니다. 페이지를 새로고침해주세요.', 'info');
+            }
+        }, 300);
         return;
     }
 
