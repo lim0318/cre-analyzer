@@ -262,7 +262,7 @@
                 <div class="section-label" style="margin-bottom:8px;">주소 검색 · 지번 또는 도로명</div>
                 <div style="display:flex; gap:8px;">
                     <input type="text" id="land-address" value="인천광역시 계양구 계산동 1000" placeholder="예) 서울특별시 강남구 테헤란로 152"
-                        class="dark-input" style="flex:1; padding:10px 14px; font-size:14px;">
+                        class="dark-input" style="flex:1; padding:10px 14px; font-size:14px;" onkeydown="if(event.key==='Enter') analyzeLand()">
                     <button onclick="analyzeLand()" id="btn-analyze"
                         style="background:linear-gradient(135deg,#3b82f6,#6366f1); color:white; padding:10px 22px; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:7px; border:none; transition:opacity 0.2s; box-shadow:0 0 20px rgba(59,130,246,0.35);"
                         onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
@@ -867,10 +867,19 @@ function setMapMode(mode) {
     if (!naverMap) return;
 
     if (mode === 'land') {
-        if (!window._cadastralLayer) {
-            window._cadastralLayer = new naver.maps.CadastralLayer();
+        naver.maps.Event.once(naverMap, 'init_stylemap', function() {
+            if (!window._cadastralLayer) {
+                window._cadastralLayer = new naver.maps.CadastralLayer();
+            }
+            window._cadastralLayer.setMap(naverMap);
+        });
+        // 이미 초기화된 경우 바로 실행
+        if (naverMap.getElement()) {
+            if (!window._cadastralLayer) {
+                window._cadastralLayer = new naver.maps.CadastralLayer();
+            }
+            window._cadastralLayer.setMap(naverMap);
         }
-        window._cadastralLayer.setMap(naverMap);
     } else {
         if (window._cadastralLayer) {
             window._cadastralLayer.setMap(null);
