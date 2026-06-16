@@ -21,7 +21,7 @@
         }
     </script>
     <script type="text/javascript"
-        src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=fmh8g0ujfh&submodules=geocoder&callback=naverMapsInit">
+        src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=fmh8g0ujfh&submodules=geocoder,cadastralLayer&callback=naverMapsInit">
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
@@ -867,9 +867,11 @@ function setMapMode(mode) {
     if (!naverMap) return;
 
     if (mode === 'land') {
-        naverMap.setMapTypeId(naver.maps.MapTypeId.CADASTRAL);
+        // 공식 지적도 레이어 표시
+        naver.maps.cadastralLayer.setMap(naverMap);
     } else {
-        naverMap.setMapTypeId(naver.maps.MapTypeId.NORMAL);
+        // 지적도 레이어 제거
+        naver.maps.cadastralLayer.setMap(null);
     }
 }
 
