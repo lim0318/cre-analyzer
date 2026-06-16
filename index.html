@@ -443,13 +443,48 @@
                 </div>
 
                 <!-- 지역지구 범례 (지도 위 오버레이) -->
-                <div id="map-legend" style="display:none; position:absolute; top:10px; right:10px; z-index:10; background:rgba(15,17,23,0.88); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px 12px; font-size:11px;">
-                    <div style="font-size:10px; font-weight:700; color:#475569; margin-bottom:6px; letter-spacing:0.08em; text-transform:uppercase;">지역지구 범례</div>
-                    <div style="display:flex; flex-direction:column; gap:4px;">
-                        <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;background:rgba(234,179,8,0.6);border:1px solid rgba(234,179,8,0.8);border-radius:2px;"></span><span style="color:#94a3b8;">주거지역</span></div>
-                        <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;background:rgba(239,68,68,0.6);border:1px solid rgba(239,68,68,0.8);border-radius:2px;"></span><span style="color:#94a3b8;">상업지역</span></div>
-                        <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;background:rgba(99,102,241,0.6);border:1px solid rgba(99,102,241,0.8);border-radius:2px;"></span><span style="color:#94a3b8;">공업지역</span></div>
-                        <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;background:rgba(34,197,94,0.6);border:1px solid rgba(34,197,94,0.8);border-radius:2px;"></span><span style="color:#94a3b8;">녹지지역</span></div>
+                <div id="map-legend" style="display:none; position:absolute; bottom:10px; right:10px; z-index:10;">
+                    <!-- 접기/펼치기 버튼 -->
+                    <button onclick="toggleLegend()" style="display:block; margin-left:auto; margin-bottom:4px; background:rgba(15,17,23,0.88); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.12); border-radius:6px; color:#94a3b8; font-size:10px; font-weight:700; padding:3px 8px; cursor:pointer; letter-spacing:0.05em;">범례 ▲</button>
+                    <div id="legend-body" style="background:rgba(15,17,23,0.92); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 12px; font-size:11px; max-height:340px; overflow-y:auto;">
+                        <!-- 주거지역 -->
+                        <div style="font-size:9px; font-weight:800; color:#64748b; letter-spacing:0.1em; margin-bottom:5px; margin-top:2px;">▌주거지역</div>
+                        <div style="display:flex; flex-direction:column; gap:3px; margin-bottom:8px;">
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#fffaaa;border:1px solid #e6c800;border-radius:2px;"></span><span style="color:#cbd5e1;">전용주거</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#ffec6e;border:1px solid #d4a800;border-radius:2px;"></span><span style="color:#cbd5e1;">일반주거</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#ffd84d;border:1px solid #c49200;border-radius:2px;"></span><span style="color:#cbd5e1;">준주거</span></div>
+                        </div>
+                        <!-- 상업지역 -->
+                        <div style="font-size:9px; font-weight:800; color:#64748b; letter-spacing:0.1em; margin-bottom:5px;">▌상업지역</div>
+                        <div style="display:flex; flex-direction:column; gap:3px; margin-bottom:8px;">
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#ffb3b3;border:1px solid #e05050;border-radius:2px;"></span><span style="color:#cbd5e1;">근린상업</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#ff7f7f;border:1px solid #cc2a2a;border-radius:2px;"></span><span style="color:#cbd5e1;">유통상업</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#ff4c4c;border:1px solid #b81c1c;border-radius:2px;"></span><span style="color:#cbd5e1;">일반상업</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#e00000;border:1px solid #900000;border-radius:2px;"></span><span style="color:#cbd5e1;">중심상업</span></div>
+                        </div>
+                        <!-- 공업지역 -->
+                        <div style="font-size:9px; font-weight:800; color:#64748b; letter-spacing:0.1em; margin-bottom:5px;">▌공업지역</div>
+                        <div style="display:flex; flex-direction:column; gap:3px; margin-bottom:8px;">
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#d4b8e0;border:1px solid #9b6cb5;border-radius:2px;"></span><span style="color:#cbd5e1;">준공업</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#b07fd4;border:1px solid #7040a0;border-radius:2px;"></span><span style="color:#cbd5e1;">일반공업</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#8b4fc8;border:1px solid #5a2090;border-radius:2px;"></span><span style="color:#cbd5e1;">전용공업</span></div>
+                        </div>
+                        <!-- 녹지지역 -->
+                        <div style="font-size:9px; font-weight:800; color:#64748b; letter-spacing:0.1em; margin-bottom:5px;">▌녹지지역</div>
+                        <div style="display:flex; flex-direction:column; gap:3px; margin-bottom:8px;">
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#b8e8b0;border:1px solid #5db850;border-radius:2px;"></span><span style="color:#cbd5e1;">보전녹지</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#78d46a;border:1px solid #3a9e2e;border-radius:2px;"></span><span style="color:#cbd5e1;">생산녹지</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#3ab82a;border:1px solid #1a7a10;border-radius:2px;"></span><span style="color:#cbd5e1;">자연녹지</span></div>
+                        </div>
+                        <!-- 관리/농림/자연환경 -->
+                        <div style="font-size:9px; font-weight:800; color:#64748b; letter-spacing:0.1em; margin-bottom:5px;">▌관리 · 농림 · 자연환경</div>
+                        <div style="display:flex; flex-direction:column; gap:3px;">
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#e8d5a0;border:1px solid #b8a050;border-radius:2px;"></span><span style="color:#cbd5e1;">보전관리</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#d4bc70;border:1px solid #9e8830;border-radius:2px;"></span><span style="color:#cbd5e1;">생산관리</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#c0a840;border:1px solid #8a7410;border-radius:2px;"></span><span style="color:#cbd5e1;">계획관리</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#a8d890;border:1px solid #60a840;border-radius:2px;"></span><span style="color:#cbd5e1;">농림지역</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;flex-shrink:0;background:#90c878;border:1px solid #489030;border-radius:2px;"></span><span style="color:#cbd5e1;">자연환경보전</span></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -859,10 +894,26 @@ function geocodeAddress(address) {
 }
 
 // 지도 모드 전환 (일반 ↔ 지적도)
+function toggleLegend() {
+    const body = document.getElementById('legend-body');
+    const btn = body.previousElementSibling;
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        btn.textContent = '범례 ▲';
+    } else {
+        body.style.display = 'none';
+        btn.textContent = '범례 ▼';
+    }
+}
+
 function setMapMode(mode) {
     ['naver', 'land'].forEach(m => {
         document.getElementById('map-btn-' + m).classList.toggle('active', m === mode);
     });
+
+    // 범례 표시/숨김
+    const legend = document.getElementById('map-legend');
+    if (legend) legend.style.display = mode === 'land' ? 'block' : 'none';
 
     if (!naverMap) return;
 
