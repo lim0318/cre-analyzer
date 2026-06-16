@@ -813,7 +813,7 @@ function initNaverMap(lat, lng, address) {
 
     // 스켈레톤 숨기기
     document.getElementById('map-skeleton').style.display = 'none';
-    document.getElementById('map-legend').style.display = 'block';
+    // 범례는 setMapMode에서만 제어
 
     // 기존 지도 있으면 중심/마커만 이동
     if (naverMap) {
