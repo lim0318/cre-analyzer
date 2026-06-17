@@ -1003,8 +1003,8 @@ function analyzeLand() {
 
     showToast('주소 조회 중...', 'info');
 
-    // 1단계: vworld 주소검색 → 좌표 + PNU 획득
-    const searchUrl = `https://api.vworld.kr/req/search?service=search&request=search&version=2.0&crs=epsg:4326&size=1&page=1&query=${encodeURIComponent(addr)}&type=parcel&format=json&errorformat=json&key=${VWORLD_KEY}`;
+    // 1단계: Worker 프록시 통해 vworld 주소검색 → 좌표 + PNU 획득
+    const searchUrl = `https://cre-proxy.thesky0318.workers.dev?type=search&query=${encodeURIComponent(addr)}`;
 
     fetch(searchUrl)
         .then(r => r.json())
@@ -1041,7 +1041,7 @@ function analyzeLand() {
 }
 
 function fetchLandUseAttr(pnu, addr) {
-    const url = `https://api.vworld.kr/ned/data/getLandUseAttr?key=${VWORLD_KEY}&domain=https://lim0318.github.io&pnu=${pnu}&format=json&numOfRows=20&pageNo=1`;
+    const url = `https://cre-proxy.thesky0318.workers.dev?type=landuse&pnu=${pnu}`;
 
     return fetch(url)
         .then(r => r.json())
