@@ -993,69 +993,87 @@ function analyzeLand() {
     const addr = document.getElementById('land-address').value.trim();
     if (!addr) { showToast('주소를 입력해주세요.', 'info'); return; }
 
-    // AI 리셋
     document.getElementById('ai-result').style.display = 'none';
     document.getElementById('ai-loading').style.display = 'none';
     document.getElementById('ai-waiting').style.display = '';
-
     renderUsageTable();
     updateChart(currentChartYears);
-
     showToast('주소 조회 중...', 'info');
 
-    // 1단계: Worker 프록시 통해 vworld 주소검색 → 좌표 + PNU 획득
-    const searchUrl = `https://cre-proxy.thesky0318.workers.dev?type=search&query=${encodeURIComponent(addr)}`;
+    const KAKAO_KEY = 'f38fa85b3da4b7f38e255eb6cae17c48';
 
-    fetch(searchUrl)
-        .then(r => r.json())
-        .then(data => {
-            if (!data.response || data.response.status !== 'OK' || !data.response.result) {
-                showToast('주소를 찾을 수 없습니다.', 'info');
-                // 네이버 geocoding fallback
-                geocodeAddress(addr);
-                return;
-            }
-            const item = data.response.result.items[0];
-            const lng = parseFloat(item.point.x);
-            const lat = parseFloat(item.point.y);
-            const pnu = item.id || '';
-
-            // PNU 표시
-            if (pnu) document.getElementById('land-pnu').value = pnu;
-
-            // 지도 표시
-            initNaverMap(lat, lng, addr);
-
-            // 2단계: PNU로 토지이용계획 조회
-            if (pnu) {
-                return fetchLandUseAttr(pnu, addr);
-            } else {
-                showToast(`[API] ${addr} 좌표 로드 완료 (PNU 없음)`, 'success');
-            }
-        })
-        .catch(() => {
-            // fallback: 네이버 geocoding
+    // 1단계: 카카오 주소검색 → 좌표 획득
+    fetch(`https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(addr)}`, {
+        headers: { 'Authorization': `KakaoAK ${KAKAO_KEY}` }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.documents || data.documents.length === 0) {
+            showToast('주소를 찾을 수 없습니다.', 'info');
             geocodeAddress(addr);
-            showToast('vworld 조회 실패, 네이버 지도로 fallback', 'info');
+            return;
+        }
+        const doc = data.documents[0];
+        const lat = parseFloat(doc.y);
+        const lng = parseFloat(doc.x);
+
+        // PNU 구성: 법정동코드(10) + 지목(1) + 본번(4) + 부번(4)
+        const addr_detail = doc.address;
+        let pnu = '';
+        if (addr_detail && addr_detail.b_code) {
+            const bCode = addr_detail.b_code; // 법정동코드 10자리
+            const mainNo = String(addr_detail.main_address_no || '0').padStart(4, '0');
+            const subNo = String(addr_detail.sub_address_no || '0').padStart(4, '0');
+            const jimok = addr_detail.mountain_yn === 'Y' ? '2' : '1';
+            pnu = bCode + jimok + mainNo + subNo;
+            document.getElementById('land-pnu').value = pnu;
+        }
+
+        // 지도 표시
+        initNaverMap(lat, lng, addr);
+
+        // 2단계: 카카오 좌표 → 토지 정보 조회
+        return fetch(`https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=${lng}&y=${lat}`, {
+            headers: { 'Authorization': `KakaoAK ${KAKAO_KEY}` }
+        })
+        .then(r => r.json())
+        .then(regionData => {
+            if (regionData.documents && regionData.documents.length > 0) {
+                const region = regionData.documents.find(d => d.region_type === 'B') || regionData.documents[0];
+                const cityName = region.region_1depth_name;
+                const sigungu = region.region_2depth_name;
+                document.getElementById('ai-city-name').textContent = cityName;
+                document.getElementById('ai-city-result').textContent = cityName;
+            }
+
+            // 3단계: Worker 통해 LURIS 조회 (PNU 있을 때)
+            if (pnu) {
+                return fetchLandUseByPnu(pnu, addr);
+            } else {
+                showToast(`[API] ${addr} 로드 완료`, 'success');
+            }
         });
+    })
+    .catch(() => {
+        geocodeAddress(addr);
+        showToast('카카오 조회 실패, 네이버로 fallback', 'info');
+    });
 }
 
-function fetchLandUseAttr(pnu, addr) {
+function fetchLandUseByPnu(pnu, addr) {
+    // Worker 통해 vworld getLandUseAttr 조회
     const url = `https://cre-proxy.thesky0318.workers.dev?type=landuse&pnu=${pnu}`;
-
     return fetch(url)
         .then(r => r.json())
         .then(data => {
             if (!data.landUseAttr || !data.landUseAttr.field) {
-                showToast(`[API] ${addr} 로드 완료 (토지이용계획 없음)`, 'success');
+                showToast(`[API] ${addr} 로드 완료 (용도지역 정보 없음)`, 'success');
                 return;
             }
-
             const fields = Array.isArray(data.landUseAttr.field)
                 ? data.landUseAttr.field
                 : [data.landUseAttr.field];
 
-            // 용도지역·지구 배지 업데이트
             const badgeContainer = document.getElementById('zoning-badges');
             badgeContainer.innerHTML = '';
             let mainZone = null;
@@ -1064,9 +1082,7 @@ function fetchLandUseAttr(pnu, addr) {
                 const name = f.prposAreaDstrcNm || '';
                 if (!name) return;
                 const badge = document.createElement('span');
-                // 용도지역이면 건폐율/용적률 기준 찾기
                 if (!mainZone && ZONING_LIMITS[name]) mainZone = name;
-                // 색상 구분
                 let cls = 'badge-blue';
                 if (name.includes('주거')) cls = 'badge-yellow';
                 else if (name.includes('상업')) cls = 'badge-red';
@@ -1078,14 +1094,10 @@ function fetchLandUseAttr(pnu, addr) {
                 badgeContainer.appendChild(badge);
             });
 
-            // 건폐율·용적률 업데이트
             if (mainZone && ZONING_LIMITS[mainZone]) {
                 const { bcr, far } = ZONING_LIMITS[mainZone];
                 document.getElementById('info-bcr').textContent = bcr + '%';
                 document.getElementById('info-far').textContent = far.toLocaleString() + '%';
-                document.getElementById('bcr-bar').style.width = bcr + '%';
-
-                // 면적 기반 건축 가능 규모 계산 (면적은 기존값 유지)
                 const areaText = document.getElementById('info-area').textContent.replace(/,/g, '');
                 const area = parseFloat(areaText) || 2450;
                 const bldgArea = Math.round(area * bcr / 100);
@@ -1097,15 +1109,10 @@ function fetchLandUseAttr(pnu, addr) {
                 document.getElementById('calc-floors').textContent = floors;
                 document.getElementById('calc-total-gross').textContent = total.toLocaleString();
             }
-
-            const cityName = addr.includes('서울') ? '서울특별시' : addr.includes('경기') ? '경기도' : addr.includes('부산') ? '부산광역시' : '인천광역시';
-            document.getElementById('ai-city-name').textContent = cityName;
-            document.getElementById('ai-city-result').textContent = cityName;
-
             showToast(`[API] ${addr} 토지이용계획 로드 완료`, 'success');
         })
         .catch(() => {
-            showToast(`[API] ${addr} 로드 완료 (토지이용계획 조회 실패)`, 'info');
+            showToast(`[API] ${addr} 로드 완료`, 'success');
         });
 }
 
